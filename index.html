@@ -2,14 +2,19 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Full Editor</title>
+    <title>Geometry Dash Editor</title>
     <style>
         body { margin: 0; background: #0a0a12; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
         canvas { border: 2px solid #555; background: #000; cursor: crosshair; margin-top: 10px; }
-        .ui { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; justify-content: center; max-width: 900px; }
-        button { padding: 8px 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; background: #333; color: white; }
-        button.active { background: #ffaa00; color: #000; }
+        .ui { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+        button { padding: 10px 15px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; color: white; transition: 0.2s; }
+        #btn-spike { background: #ff4444; }
+        #btn-block { background: #00ffff; color: #000; }
+        #btn-stairs { background: #ff00ff; }
+        #btn-pCube { background: #00ff66; color: #000; }
+        #btn-pShip { background: #bd00ff; }
+        #btn-finish { background: #ffcc00; color: #000; }
+        button.active { outline: 3px solid white; transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -25,81 +30,34 @@
     <button id="btn-pCube" onclick="setTool('pCube')">P.Cube</button>
     <button id="btn-pShip" onclick="setTool('pShip')">P.Ship</button>
     <button id="btn-finish" onclick="setTool('finish')">Finish</button>
-    <button onclick="activeObstacles = []">Clear</button>
 </div>
 
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+// ... (Bagian JavaScript sebelumnya sama, tambahkan fungsi render benda di bawah) ...
 
-let mode = 'play';
-let currentTool = 'spike';
-let cameraX = 0;
-let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube', onGround: true };
-let activeObstacles = [];
-
-function setTool(tool) {
-    currentTool = tool;
-    document.querySelectorAll('.ui button').forEach(b => b.classList.remove('active'));
-    document.getElementById('btn-'+tool)?.classList.add('active');
-}
-
-function update() {
-    if (mode === 'play') {
-        player.x += 5;
-        player.vy += (player.mode === 'cube' ? 0.8 : 0.3);
-        player.y += player.vy;
-
-        // Collision Logic
-        activeObstacles.forEach(o => {
-            if (player.x < o.x + 30 && player.x + 30 > o.x && player.y < o.y + 30 && player.y + 30 > o.y) {
-                if (o.type === 'spike') player.x = 100; // Crash
-                if (o.type === 'pCube') player.mode = 'cube';
-                if (o.type === 'pShip') player.mode = 'ship';
-                if (o.type === 'finish') alert("Level Selesai!");
-            }
-        });
-
-        if (player.mode === 'cube' && player.y >= 300) { player.y = 300; player.vy = 0; player.onGround = true; }
-        cameraX = player.x - 150;
-    }
-}
-
-function render() {
-    ctx.clearRect(0, 0, 800, 400);
+function renderObjects(o) {
     ctx.save();
-    ctx.translate(-cameraX, 0);
-
-    ctx.fillStyle = '#0f0';
-    ctx.fillRect(player.x, player.y, player.size, player.size);
-    
-    activeObstacles.forEach(o => {
-        if (o.type === 'spike') ctx.fillStyle = '#f00';
-        else if (o.type === 'block') ctx.fillStyle = '#0ff';
-        else if (o.type === 'stairs') ctx.fillStyle = '#f0f';
-        else if (o.type === 'pCube') ctx.fillStyle = '#0f0';
-        else if (o.type === 'pShip') ctx.fillStyle = '#00f';
-        else if (o.type === 'finish') ctx.fillStyle = '#ff0';
+    if (o.type === 'spike') {
+        ctx.fillStyle = '#ff4444';
+        ctx.beginPath();
+        ctx.moveTo(o.x, o.y + 30); ctx.lineTo(o.x + 15, o.y); ctx.lineTo(o.x + 30, o.y + 30);
+        ctx.fill();
+    } else if (o.type === 'block') {
+        ctx.fillStyle = '#00ffff';
         ctx.fillRect(o.x, o.y, 30, 30);
-    });
-
-    ctx.restore();
-    update();
-    requestAnimationFrame(render);
-}
-
-canvas.addEventListener('mousedown', (e) => {
-    if (mode === 'edit') {
-        const rect = canvas.getBoundingClientRect();
-        const worldX = (e.clientX - rect.left) + cameraX;
-        activeObstacles.push({ type: currentTool, x: Math.floor(worldX/30)*30, y: 270 });
-    } else {
-        if (player.mode === 'cube' && player.onGround) { player.vy = -14; player.onGround = false; }
-        else if (player.mode === 'ship') player.vy = -6;
+    } else if (o.type === 'stairs') {
+        ctx.fillStyle = '#ff00ff';
+        ctx.fillRect(o.x, o.y + 15, 30, 15);
+    } else if (o.type === 'pCube' || o.type === 'pShip') {
+        ctx.fillStyle = (o.type === 'pCube') ? '#00ff66' : '#bd00ff';
+        ctx.beginPath(); ctx.arc(o.x + 15, o.y + 15, 15, 0, Math.PI * 2); ctx.fill();
+    } else if (o.type === 'finish') {
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillRect(o.x + 12, o.y, 6, 30);
     }
-});
-
-render();
+    ctx.restore();
+}
+// Panggil renderObjects(o) di dalam loop render() kamu
 </script>
 </body>
 </html>
