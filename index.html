@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Full Fix</title>
+    <title>Geometry Dash - Extended Editor</title>
     <style>
         body { margin: 0; background: #0a0a12; color: white; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
         canvas { border: 2px solid #555; background: #000; cursor: crosshair; margin-top: 10px; width: 800px; height: 400px; }
-        .ui { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; background: #333; color: white; }
+        .ui { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+        button { padding: 8px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; background: #333; color: white; }
+        button.active { background: #00ff66; color: #000; }
     </style>
 </head>
 <body>
@@ -18,7 +19,8 @@
 <div class="ui">
     <button onclick="mode='play'">Mode: Main</button>
     <button onclick="mode='edit'">Mode: Editor</button>
-    <button onclick="player.mode = (player.mode==='cube'?'ship':'cube')">Switch Cube/Ship</button>
+    <button id="btnSpike" class="active" onclick="setTool('spike')">Tool: Duri</button>
+    <button id="btnBlock" onclick="setTool('block')">Tool: Block</button>
     <button onclick="activeObstacles = []">Reset Level</button>
 </div>
 
@@ -27,26 +29,22 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 let mode = 'play';
+let currentTool = 'spike';
 let cameraX = 0;
 let gravity = 0.8;
-let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube', color: '#0f0', onGround: true };
-let activeObstacles = [{ x: 500, y: 320 }, { x: 900, y: 320 }];
+let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube', onGround: true };
+let activeObstacles = [{ type: 'spike', x: 500, y: 320 }, { type: 'block', x: 700, y: 250 }];
 
-// PERBAIKAN FUNGSI LOMPAT:
-// Dipastikan hanya berjalan jika player benar-benar menyentuh tanah (onGround)
-function jump() {
-    if (player.mode === 'cube') {
-        if (player.onGround) {
-            player.vy = -14;
-            player.onGround = false;
-        }
-    }
+function setTool(tool) {
+    currentTool = tool;
+    document.getElementById('btnSpike').className = (tool === 'spike' ? 'active' : '');
+    document.getElementById('btnBlock').className = (tool === 'block' ? 'active' : '');
 }
 
-// FUNGSI SHIP: Terbang saat ditekan
-function shipThrust(isThrusting) {
-    if (player.mode === 'ship') {
-        player.vy = isThrusting ? -8 : 8;
+function jump() {
+    if (player.mode === 'cube' && player.onGround) {
+        player.vy = -14;
+        player.onGround = false;
     }
 }
 
@@ -54,23 +52,23 @@ function update() {
     if (mode === 'play') {
         player.x += 5;
         
-        // Logika Fisika
-        if (player.mode === 'cube') {
-            player.vy += gravity;
-            player.y += player.vy;
-            
-            // Cek Lantai
-            if (player.y >= 300) {
-                player.y = 300;
-                player.vy = 0;
-                player.onGround = true;
-            }
-        } else {
-            // Mode Ship tidak kena gravitasi seberat cube
-            player.y += player.vy;
-            if (player.y > 370) player.y = 370;
-            if (player.y < 0) player.y = 0;
+        // Fisika Cube
+        player.vy += gravity;
+        player.y += player.vy;
+        
+        // Deteksi Lantai Dasar
+        if (player.y >= 300) {
+            player.y = 300;
+            player.vy = 0;
+            player.onGround = true;
         }
+
+        // Deteksi Tabrakan Sederhana
+        activeObstacles.forEach(o => {
+            if (player.x < o.x + 30 && player.x + 30 > o.x && player.y < o.y + 30 && player.y + 30 > o.y) {
+                if(o.type === 'spike') player.x = 100; // Reset jika kena duri
+            }
+        });
 
         cameraX = player.x - 150;
     }
@@ -82,36 +80,35 @@ function render() {
     ctx.translate(-cameraX, 0);
 
     // Gambar Player
-    ctx.fillStyle = player.mode === 'cube' ? '#0f0' : '#00f';
+    ctx.fillStyle = '#0f0';
     ctx.fillRect(player.x, player.y, player.size, player.size);
     
-    // Gambar Duri
-    ctx.fillStyle = '#f00';
-    activeObstacles.forEach(o => ctx.fillRect(o.x, o.y, 30, 30));
+    // Gambar Benda
+    activeObstacles.forEach(o => {
+        ctx.fillStyle = (o.type === 'spike') ? '#f00' : '#00ffff';
+        ctx.fillRect(o.x, o.y, 30, 30);
+    });
 
     ctx.restore();
     update();
     requestAnimationFrame(render);
 }
 
-// Event Input Agresif
-window.addEventListener('mousedown', () => {
-    if(mode === 'play') { jump(); shipThrust(true); }
-});
-window.addEventListener('mouseup', () => shipThrust(false));
-window.addEventListener('keydown', (e) => {
-    if(e.code === 'Space') { jump(); shipThrust(true); }
-});
-window.addEventListener('keyup', () => shipThrust(false));
-
 // Editor Klik
 canvas.addEventListener('mousedown', (e) => {
     if (mode === 'edit') {
         const rect = canvas.getBoundingClientRect();
         const worldX = (e.clientX - rect.left) + cameraX;
-        activeObstacles.push({ x: worldX, y: 320 });
+        // Membulatkan posisi ke grid 30px agar rapi
+        const gridX = Math.floor(worldX / 30) * 30;
+        const gridY = Math.floor((e.clientY - rect.top) / 30) * 30;
+        activeObstacles.push({ type: currentTool, x: gridX, y: gridY });
+    } else {
+        jump();
     }
 });
+
+window.addEventListener('keydown', (e) => { if(e.code === 'Space') jump(); });
 
 render();
 </script>
