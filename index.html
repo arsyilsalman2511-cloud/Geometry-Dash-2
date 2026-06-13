@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Geometry Dash - Perfect Fix</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a12;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            color: #fff;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle, #1a1a3a 0%, #050510 100%);
+        }
+        canvas {
+            background: linear-gradient(to bottom, #140026, #050515);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.25);
+            max-width: 100%;
+            max-height: 55vh;
+            border: 2px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .ui-panel {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .row-buttons {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 4px;
+        }
+        .movement-controls {
+            display: none;
+            gap: 8px;
+            width: 40%;
+        }
+        
+        #gamepadArea {
+            width: 100%;
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            background: #00ffff;
+            color: #000;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 #00aaaa;
+            text-transform: uppercase;
+            flex: 1;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+        button:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #00aaaa;
+        }
+        .btn-mode { background: #ff00ff; color: white; box-shadow: 0 4px 0 #aa00aa; }
+        .btn-mode:active { box-shadow: 0 1px 0 #aa00aa; }
+        .btn-control-type { background: #ffff00; color: #000; box-shadow: 0 4px 0 #999900; }
+        .btn-control-type:active { box-shadow: 0 1px 0 #999900; }
+        .btn-skin { background: #ffaa00; color: #000; box-shadow: 0 4px 0 #cc7700; }
+        .btn-skin:active { box-shadow: 0 1px 0 #cc7700; }
+        .btn-zoom { background: #00ff66; color: #000; box-shadow: 0 4px 0 #00aa44; }
+        .btn-zoom:active { box-shadow: 0 1px 0 #00aa44; }
+        
+        .btn-move { width: 50%; padding: 16px 0; background: #222244; color: white; box-shadow: 0 4px 0 #111122; font-size: 15px;}
+        .btn-jump { 
+            width: 95%; 
+            padding: 16px 0; 
+            background: #00ff66; 
+            box-shadow: 0 5px 0 #00aa44; 
+            font-size: 16px;
+        }
+        
+        .editor-tools {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 12px;
+            gap: 8px;
+            width: 95%;
+            max-width: 780px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .active-tool {
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 0 12px currentColor !important;
+        }
+        .btn-rotate-setting {
+            background: #ff5500;
+            color: #fff;
+            box-shadow: 0 4px 0 #b33b00;
+        }
+
+        .skin-modal {
+            display: none;
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 15, 35, 0.95);
+            border: 2px solid #ffaa00;
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            padding: 15px;
+            border-radius: 12px;
+            flex-direction: column;
+            gap: 10px;
+            width: 280px;
+            z-index: 100;
+            box-sizing: border-box;
+        }
+        .skin-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .skin-row input[type="color"] {
+            border: none;
+            width: 45px;
+            height: 25px;
+            background: none;
+            cursor: pointer;
+        }
+        .skin-row select {
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
+            font-size: 12px;
+            padding: 4px;
+            border-radius: 4px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Tips PC: Klik area game terlebih dahulu agar tombol keyboard aktif!</div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <div class="ui-panel">
+        <div class="row-buttons">
+            <button id="modeBtn" class="btn-mode">Mode: Main</button>
+            <button id="controlTypeBtn" class="btn-control-type">Kontrol: Only Jump</button>
+            <button id="skinBtn" class="btn-skin">🎨 Skin</button>
+            <button id="zoomBtn" class="btn-zoom">🔎 Zoom: 100% [+/-]</button>
+            <button id="levelBtn" style="background: #0088ff; box-shadow: 0 4px 0 #0044aa; color: white;">Lv: 1</button>
+        </div>
+        
+        <div class="row-buttons" id="gamepadArea" style="margin-top: 3px;">
+            <div id="movementUi" class="movement-controls">
+                <button id="leftBtn" class="btn-move">◀ KIRI</button>
+                <button id="rightBtn" class="btn-move">KANAN ▶</button>
+            </div>
+            <button id="jumpBtn" class="btn-jump">LOMPAT / TERBANG (TAHAN)</button>
+        </div>
+    </div>
+
+    <div id="editorTools" class="editor-tools">
+        <button id="toolCube" class="active-tool" style="background: #00ffff; color: #000;">+ KOTAK</button>
+        <button id="toolSpike" style="background: #ff3333; color: white; box-shadow: 0 4px 0 #990000;">+ DURI</button>
+        <button id="toolStairs" style="background: #00ffcc; color: black; box-shadow: 0 4px 0 #00b38f;">+ TANGGA</button>
+        <button id="toolPortalCube" style="background: #00ff66; color: black; box-shadow: 0 4px 0 #009944;">🌀 P. CUBE</button>
+        <button id="toolPortalShip" style="background: #bd00ff; color: white; box-shadow: 0 4px 0 #7a00aa;">🚀 P. SHIP</button>
+        <button id="toolFinish" style="background: #ffffff; color: black; box-shadow: 0 4px 0 #aaaaaa;">🏁 + FINISH</button>
+        <button id="toolEraser" style="background: #ffaa00; color: black; box-shadow: 0 4px 0 #cc7700;">❌ HAPUS</button>
+        <button id="rotateSettingBtn" class="btn-rotate-setting">🔄 ROTASI: 0°</button>
+        <button id="clearBtn" style="background: #666; color: white; box-shadow: 0 4px 0 #333;">Reset Level</button>
+    </div>
+
+    <div id="skinModal" class="skin-modal">
+        <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 5px; color: #ffaa00;">CUSTOM SKIN ICON</div>
+        <div class="skin-row" style="margin-top: 5px;">
+            <span>🟢 Warna Utama:</span>
+            <input type="color" id="primaryColor" value="#00ff66">
+        </div>
+        <div class="skin-row">
+            <span>🔵 Warna Detail:</span>
+            <input type="color" id="secondaryColor" value="#00ffff">
+        </div>
+        <div class="skin-row">
+            <span>🎭 Corak / Mata:</span>
+            <select id="skinPattern">
+                <option value="default">Kotak Dalam</option>
+                <option value="smile">Muka Senyum</option>
+                <option value="cross">Silang (X)</option>
+                <option value="stripes">Garis-Garis</option>
+            </select>
+        </div>
+        <button id="closeSkinBtn" style="background: #ff3333; color: white; box-shadow: 0 3px 0 #990000; padding: 6px; border-radius: 6px; margin-top: 5px;">Simpan & Tutup</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const GRID_SIZE = 40; 
+const GROUND_Y = 320; 
+
+let mode = 'play'; 
+let controlMode = 'only_jump'; 
+let currentLevelIndex = 0;
+let selectedTool = 'cube'; 
+let currentRotationDegree = 0; 
+
+const skinConfig = {
+    primary: '#00ff66',
+    secondary: '#00ffff',
+    pattern: 'default'
+};
+
+let cameraZoom = 1.0; 
+
+const gravity = 0.65;
+const jumpForce = -10.5;
+const shipThrust = -0.55;  
+const shipGravity = 0.45;  
+const MANUAL_SPEED = 5; 
+
+let isJumpingPressed = false; 
+let isLeftPressed = false;   
+let isRightPressed = false;  
+
+let isGameOver = false;
+let isGameWon = false; 
+let gameStarted = false; // Status penahan agar game tidak otomatis jalan sebelum di-klik
+
+const player = {
+    x: 120, 
+    y: GROUND_Y - 40,
+    size: 32,
+    vy: 0,
+    isGrounded: false,
+    onStairs: false,
+    rotation: 0,
+    type: 'cube', 
+    reset: function() {
+        this.x = 120;
+        this.y = GROUND_Y - this.size;
+        this.vy = 0;
+        this.rotation = 0;
+        this.isGrounded = true;
+        this.onStairs = false;
+        this.type = 'cube'; 
+    }
+};
+
+const levels = [
+    [
+        {type: 'spike', x: 440, y: GROUND_Y, angle: 0},
+        {type: 'portal_ship', x: 560, y: 220, w: 40, h: 80}, 
+        {type: 'cube', x: 760, y: 160, w: 40, h: 40},
+        {type: 'portal_cube', x: 920, y: 220, w: 40, h: 80}, 
+        {type: 'finish', x: 1300, y: GROUND_Y}
+    ],
+    [
+        {type: 'stairs', x: 400, y: GROUND_Y - 40, w: 40, h: 40, angle: 0},
+        {type: 'finish', x: 1100, y: GROUND_Y}
+    ]
+];
+
+let activeObstacles = JSON.parse(JSON.stringify(levels[currentLevelIndex]));
+let cameraX = 0;
+let cameraY = 0; 
+let gameSpeed = 5;
+
+// --- ENGINE GRAFIS ---
+
+function drawSpike(x, y, angle) {
+    ctx.save();
+    ctx.translate(x, y - GRID_SIZE / 2);
+    ctx.rotate((angle * Math.PI) / 180);
+    ctx.shadowBlur = 12; ctx.shadowColor = "#ff3333";
+    ctx.fillStyle = "#ff4444";
+    ctx.beginPath();
+    ctx.moveTo(-GRID_SIZE / 2, GRID_SIZE / 2); ctx.lineTo(0, -GRID_SIZE / 2); ctx.lineTo(GRID_SIZE / 2, GRID_SIZE / 2);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+}
+
+function drawCube(x, y, w, h) {
+    ctx.save();
+    ctx.shadowBlur = 12; ctx.shadowColor = "#00ffff";
+    let gradient = ctx.createLinearGradient(x - w/2, y, x - w/2, y + h);
+    gradient.addColorStop(0, "#00ffff"); gradient.addColorStop(1, "#004466");
+    ctx.fillStyle = gradient; ctx.fillRect(x - w/2, y, w, h);
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.strokeRect(x - w/2, y, w, h);
+    ctx.restore();
+}
+
+function drawStairs(x, y, w, h, angle) {
+    ctx.save();
+    ctx.translate(x, y + h / 2);
+    ctx.rotate((angle * Math.PI) / 180);
+    ctx.shadowBlur = 12; ctx.shadowColor = "#00ffcc";
+    ctx.fillStyle = "rgba(0, 255, 190, 0.7)";
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-w/2, h/2); ctx.lineTo(-w/2, -h/2); ctx.lineTo(w/2, -h/2); ctx.lineTo(w/2, h/2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.beginPath();
+    ctx.moveTo(-w/2, h/2); ctx.lineTo(w/2, -h/2); ctx.stroke(); 
+    ctx.restore();
+}
+
+function drawTypePortal(x, y, w, h, targetType) {
+    ctx.save();
+    ctx.translate(x, y + h/2);
+    let color = targetType === 'ship' ? "#bd00ff" : "#00ff66";
+    ctx.shadowBlur = 15; ctx.shadowColor = color;
+    ctx.fillStyle = targetType === 'ship' ? "rgba(189, 0, 255, 0.2)" : "rgba(0, 255, 102, 0.2)";
+    ctx.strokeStyle = color; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.ellipse(0, 0, w/5, h/3, 0, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = "9px Arial"; ctx.textAlign = "center";
+    ctx.fillText(targetType.toUpperCase(), 0, -h/2 - 4);
+    ctx.restore();
+}
+
+function drawFinishLine(x, y) {
+    ctx.save();
+    ctx.shadowBlur = 15; ctx.shadowColor = "#ffff00";
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(x - 4, y - 80, 6, 80);
+    ctx.fillStyle = "#ffcc00";
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y - 80); ctx.lineTo(x + 35, y - 60); ctx.lineTo(x + 2, y - 40);
+    ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#ffffff"; ctx.stroke();
+    ctx.restore();
+}
+
+function drawPlayer() {
+    ctx.save();
+    ctx.translate(player.x + player.size/2, player.y + player.size/2);
+    ctx.rotate(player.rotation);
+    ctx.shadowBlur = 15; ctx.shadowColor = skinConfig.secondary;
+    
+    if (player.type === 'cube') {
+        ctx.fillStyle = skinConfig.primary; 
+        ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+        
+        ctx.strokeStyle = skinConfig.secondary; 
+        ctx.lineWidth = 3;
+        
+        if (skinConfig.pattern === 'default') {
+            ctx.strokeRect(-player.size/2 + 5, -player.size/2 + 5, player.size - 10, player.size - 10);
+        } else if (skinConfig.pattern === 'smile') {
+            ctx.fillStyle = skinConfig.secondary;
+            ctx.fillRect(-6, -7, 3, 5); 
+            ctx.fillRect(3, -7, 3, 5);  
+            ctx.fillRect(-7, 3, 14, 3);  
+        } else if (skinConfig.pattern === 'cross') {
+            ctx.beginPath();
+            ctx.moveTo(-player.size/2, -player.size/2); ctx.lineTo(player.size/2, player.size/2);
+            ctx.moveTo(player.size/2, -player.size/2); ctx.lineTo(-player.size/2, player.size/2);
+            ctx.stroke();
+        } else if (skinConfig.pattern === 'stripes') {
+            ctx.fillStyle = skinConfig.secondary;
+            ctx.fillRect(-8, -player.size/2, 3, player.size);
+            ctx.fillRect(5, -player.size/2, 3, player.size);
+        }
+        
+        ctx.strokeStyle = "#000000"; ctx.lineWidth = 1.5;
+        ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
+    } else {
+        ctx.fillStyle = skinConfig.primary;
+        ctx.beginPath();
+        ctx.moveTo(-player.size/2, player.size/4);
+        ctx.lineTo(player.size/2, 0);
+        ctx.lineTo(-player.size/2, -player.size/2);
+        ctx.lineTo(-player.size/4, 0);
+        ctx.closePath(); ctx.fill();
+        
+        ctx.strokeStyle = skinConfig.secondary; ctx.lineWidth = 2; ctx.stroke();
+        
+        ctx.fillStyle = skinConfig.secondary; 
+        ctx.fillRect(-player.size/2 - 2, -4, 6, 8);
+    }
+    ctx.restore();
+}
+
+function drawBackground() {
+    ctx.strokeStyle = mode === 'edit' ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.04)";
+    ctx.lineWidth = 1;
+    let offsetX = -cameraX % GRID_SIZE;
+    for (let x = offsetX - 200; x < canvas.width / cameraZoom + 200; x += GRID_SIZE) {
+        ctx.beginPath(); ctx.moveTo(x, -200); ctx.lineTo(x, canvas.height / cameraZoom + 200); ctx.stroke();
+    }
+    for (let y = -200; y < canvas.height / cameraZoom + 200; y += GRID_SIZE) {
+        ctx.beginPath(); ctx.moveTo(-200, y); ctx.lineTo(canvas.width / cameraZoom + 200, y); ctx.stroke();
+    }
+    ctx.fillStyle = "#09091e"; ctx.fillRect(-500, GROUND_Y, canvas.width / cameraZoom + 2000, canvas.height * 2);
+    ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-500, GROUND_Y); ctx.lineTo(canvas.width / cameraZoom + 2000, GROUND_Y); ctx.stroke();
+}
+
+// --- LOGIKA UTAMA GAMEPLAY ---
+
+function executeJump() {
+    if (player.type === 'cube') {
+        if ((player.isGrounded || player.onStairs) && !isGameOver && !isGameWon && mode === 'play') {
+            player.vy = jumpForce;
+            player.isGrounded = false;
+            player.onStairs = false;
+        }
+    }
+}
+
+function checkCollision(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.w &&
+           rect1.x + rect1.w > rect2.x &&
+           rect1.y < rect2.y + rect2.h &&
+           rect1.y + rect1.h > rect2.y;
+}
+
+function updateCameraUI() {
+    const zoomBtn = document.getElementById('zoomBtn');
+    zoomBtn.innerText = `🔎 Zoom: ${Math.round(cameraZoom * 100)}% [+/-]`;
+}
+
+function update() {
+    if (mode === 'play' && !isGameOver && !isGameWon) {
+        
+        // PENGAMAN: Jika game belum dimulai oleh player, kunci pergerakan di zona aman
+        if (!gameStarted) {
+            player.y = GROUND_Y - player.size;
+            player.vy = 0;
+            player.isGrounded = true;
+            return;
+        }
+
+        let isMoving = false;
+
+        if (controlMode === 'only_jump') {
+            player.x += gameSpeed;
+            isMoving = true;
+        } else {
+            if (isRightPressed) { player.x += MANUAL_SPEED; isMoving = true; }
+            if (isLeftPressed) { player.x -= MANUAL_SPEED; isMoving = true; }
+        }
+
+        cameraX = player.x - 120;
+        cameraY = 0;
+        if (cameraX < 0) cameraX = 0;
+
+        if (player.type === 'cube') {
+            player.vy += gravity;
+            player.y += player.vy;
+
+            if (isJumpingPressed && (player.isGrounded || player.onStairs)) {
+                executeJump();
+            }
+        } else {
+            if (isJumpingPressed) {
+                player.vy += shipThrust; 
+            } else {
+                player.vy += shipGravity; 
+            }
+            if (player.vy < -6) player.vy = -6;
+            if (player.vy > 6) player.vy = 6;
+            
+            player.y += player.vy;
+            player.isGrounded = false;
+        }
+
+        if (player.y < 0) {
+            player.y = 0;
+            player.vy = 0;
+        }
+
+        if (player.y >= GROUND_Y - player.size) {
+            player.y = GROUND_Y - player.size;
+            player.vy = 0;
+            player.isGrounded = true;
+            
+            if (player.type === 'cube') {
+                if (controlMode === 'only_jump') player.rotation += 0.08;
+                else {
+                    if(isRightPressed) player.rotation += 0.1;
+                    else if(isLeftPressed) player.rotation -= 0.1;
+                    else player.rotation = Math.round(player.rotation / (Math.PI / 2)) * (Math.PI / 2);
+                }
+            } else {
+                player.rotation = 0; 
+            }
+        } else if (!player.onStairs) {
+            if (player.type === 'cube') {
+                player.rotation += 0.08;
+            } else {
+                player.rotation = player.vy * 0.06;
+            }
+        }
+
+        let playerRect = {x: player.x, y: player.y, w: player.size, h: player.size};
+        let touchingAnyStairs = false;
+
+        activeObstacles.forEach(obs => {
+            let obsRect;
+            if (obs.type === 'spike') {
+                obsRect = {x: obs.x - GRID_SIZE/2 + 6, y: obs.y - GRID_SIZE, w: GRID_SIZE - 12, h: GRID_SIZE};
+            } else if (obs.type === 'cube' || obs.type === 'stairs' || obs.type === 'portal_cube' || obs.type === 'portal_ship') {
+                obsRect = {x: obs.x - obs.w/2, y: obs.y, w: obs.w, h: obs.h};
+            } else if (obs.type === 'finish') {
+                obsRect = {x: obs.x - 10, y: obs.y - 80, w: 20, h: 80};
+            }
+
+            if (checkCollision(playerRect, obsRect)) {
+                if (obs.type === 'finish') {
+                    isGameWon = true; 
+                } 
+                else if (obs.type === 'portal_cube') {
+                    player.type = 'cube';
+                }
+                else if (obs.type === 'portal_ship') {
+                    player.type = 'ship';
+                }
+                else if (obs.type === 'stairs') {
+                    touchingAnyStairs = true;
+                    player.vy = 0;
+                    if (isMoving) {
+                        player.y -= (controlMode === 'only_jump' ? gameSpeed : MANUAL_SPEED) * 0.8;
+                    } else {
+                        player.y += 3; 
+                    }
+                    if (player.y > obs.y + obs.h - player.size) player.y = obs.y + obs.h - player.size;
+                }
+                else if (obs.type === 'cube' && (player.y + player.size - player.vy) <= obs.y + 8) {
+                    player.y = obs.y - player.size;
+                    player.vy = 0;
+                    player.isGrounded = true;
+                    if (isJumpingPressed && player.type === 'cube') executeJump();
+                } else {
+                    isGameOver = true;
+                }
+            }
+        });
+
+        player.onStairs = touchingAnyStairs;
+    }
+}
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(cameraZoom, cameraZoom);
+    ctx.translate(-cameraX - canvas.width / (2 * cameraZoom), -cameraY - canvas.height / (2 * cameraZoom));
+
+    drawBackground();
+
+    activeObstacles.forEach(obs => {
+        if (obs.type === 'spike') drawSpike(obs.x, obs.y, obs.angle || 0);
+        else if (obs.type === 'cube') drawCube(obs.x, obs.y, obs.w, obs.h);
+        else if (obs.type === 'stairs') drawStairs(obs.x, obs.y, obs.w, obs.h, obs.angle || 0);
+        else if (obs.type === 'portal_cube') drawTypePortal(obs.x, obs.y, obs.w || 40, obs.h || 80, 'cube');
+        else if (obs.type === 'portal_ship') drawTypePortal(obs.x, obs.y, obs.w || 40, obs.h || 80, 'ship');
+        else if (obs.type === 'finish') drawFinishLine(obs.x, obs.y);
+    });
+
+    drawPlayer();
+    ctx.restore(); 
+
+    // Overlay visual jika game siap dimainkan (Tap to Start)
+    if (mode === 'play' && !gameStarted && !isGameOver && !isGameWon) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#00ffff"; ctx.font = "bold 22px Arial"; ctx.textAlign = "center";
+        ctx.fillText("GEOMETRY DASH - READY", canvas.width / 2, canvas.height / 2 - 20);
+        ctx.fillStyle = "#ffffff"; ctx.font = "14px Arial";
+        ctx.fillText("Tekan SPASI atau KLIK DI SINI untuk Mulai Main!", canvas.width / 2, canvas.height / 2 + 15);
+    }
+
+    if (isGameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#ff3333"; ctx.font = "bold 35px Arial"; ctx.textAlign = "center";
+        ctx.fillText("CRASHED!", canvas.width / 2, canvas.height / 2);
+        ctx.fillStyle = "#ffffff"; ctx.font = "16px Arial";
+        ctx.fillText("Tekan SPASI / KLIK untuk Main Lagi", canvas.width / 2, canvas.height / 2 + 40);
+    }
+    if (isGameWon) {
+        ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#ffff00"; ctx.font = "bold 35px Arial"; ctx.textAlign = "center";
+        ctx.fillText("LEVEL PASSED!", canvas.width / 2, canvas.height / 2);
+        ctx.fillStyle = "#ffffff"; ctx.font = "16px Arial";
+        ctx.fillText("Tekan SPASI / KLIK untuk Main Lagi", canvas.width / 2, canvas.height / 2 + 40);
+    }
+}
+
+function resetGame() {
+    isGameOver = false; isGameWon = false; gameStarted = false; cameraX = 0; cameraY = 0;
+    player.reset();
+}
+
+function loop() {
+    update(); render(); requestAnimationFrame(loop);
+}
+
+// --- MANAJEMEN EVENT INTERFACE & POP-UP SKIN ---
+const modeBtn = document.getElementById('modeBtn');
+const controlTypeBtn = document.getElementById('controlTypeBtn');
+const zoomBtn = document.getElementById('zoomBtn');
+const levelBtn = document.getElementById('levelBtn');
+const jumpBtn = document.getElementById('jumpBtn');
+
+const skinBtn = document.getElementById('skinBtn');
+const skinModal = document.getElementById('skinModal');
+const closeSkinBtn = document.getElementById('closeSkinBtn');
+
+document.getElementById('primaryColor').addEventListener('input', (e) => skinConfig.primary = e.target.value);
+document.getElementById('secondaryColor').addEventListener('input', (e) => skinConfig.secondary = e.target.value);
+document.getElementById('skinPattern').addEventListener('change', (e) => skinConfig.pattern = e.target.value);
+
+skinBtn.addEventListener('click', () => {
+    skinModal.style.display = "flex";
+    if(mode === 'play') { isJumpingPressed = false; }
+});
+closeSkinBtn.addEventListener('click', () => {
+    skinModal.style.display = "none";
+    resetGame();
+});
+
+modeBtn.addEventListener('click', () => {
+    if (mode === 'play') {
+        mode = 'edit'; modeBtn.innerText = "Mode: Editor";
+        document.getElementById('editorTools').style.display = 'flex';
+    } else {
+        mode = 'play'; modeBtn.innerText = "Mode: Main";
+        document.getElementById('editorTools').style.display = 'none';
+        resetGame();
+    }
+});
+
+controlTypeBtn.addEventListener('click', () => {
+    if (controlMode === 'only_jump') {
+        controlMode = 'manual'; controlTypeBtn.innerText = "Kontrol: Manual (K/K)";
+        if (isMobileDevice()) {
+            document.getElementById('movementUi').style.display = 'flex';
+            jumpBtn.style.width = "50%";
+        }
+    } else {
+        controlMode = 'only_jump'; controlTypeBtn.innerText = "Kontrol: Only Jump";
+        document.getElementById('movementUi').style.display = 'none';
+        jumpBtn.style.width = "95%";
+    }
+    resetGame();
+});
+
+zoomBtn.addEventListener('click', () => { if (cameraZoom >= 1.2) cameraZoom = 0.7; else cameraZoom += 0.15; updateCameraUI(); });
+
+levelBtn.addEventListener('click', () => {
+    currentLevelIndex = (currentLevelIndex + 1) % levels.length;
+    levelBtn.innerText = `Lv: ${currentLevelIndex + 1}`;
+    activeObstacles = JSON.parse(JSON.stringify(levels[currentLevelIndex]));
+    resetGame();
+});
+
+// ==================== SYSTEM INPUT ANTI GAGAL (PC & MOBILE) ====================
+
+function isMobileDevice() {
+    const matchUA = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    return matchUA && hasTouch;
+}
+
+function inputJumpStart() { 
+    if (isGameOver || isGameWon) {
+        resetGame(); 
+    } else {
+        if (!gameStarted && mode === 'play') {
+            gameStarted = true; // Jalankan gerakan map saat player pertama kali melompat/klik
+        }
+        isJumpingPressed = true; 
+    }
+}
+function inputJumpEnd() { 
+    isJumpingPressed = false; 
+}
+
+// Deteksi input gabungan (Nama Tombol Teks + Sistem Angka ASCII Jadul Browser)
+// GANTI BLOK KEYDOWN LAMA DENGAN INI UNTUK MEMAKSA INPUT MASUK:
+window.addEventListener('keydown', function(e) {
+    // Cetak ke konsol browser untuk memastikan tombolmu terbaca
+    console.log("Tombol ditekan: ", e.key); 
+    
+    // Matikan fungsi bawaan browser (seperti scrolling)
+    e.preventDefault(); 
+
+    if (isGameOver || isGameWon) {
+        resetGame();
+        return;
+    }
+
+    // PAKSA: Tombol apa pun yang ditekan (Spasi, Panah, W, dll) akan memicu lompatan
+    inputJumpStart();
+    
+    // Logika manual (jika kontrol diubah ke manual)
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isLeftPressed = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isRightPressed = true;
+}, { passive: false });
+
+window.addEventListener('keyup', function(e) {
+    const key = e.key || '';
+    const code = e.keyCode || e.which || 0;
+
+    if (key === ' ' || code === 32 || key === 'ArrowUp' || code === 38 || key === 'w' || key === 'W') {
+        inputJumpEnd();
+    }
+    if (key === 'ArrowLeft' || code === 37 || key === 'a' || key === 'A') {
+        isLeftPressed = false;
+    }
+    if (key === 'ArrowRight' || code === 39 || key === 'd' || key === 'D') {
+        isRightPressed = false;
+    }
+});
+
+// Deteksi klik mouse pada canvas untuk melompat
+canvas.addEventListener('mousedown', function(e) {
+    if (mode === 'play') {
+        inputJumpStart();
+    }
+});
+canvas.addEventListener('mouseup', function() {
+    if (mode === 'play') {
+        inputJumpEnd();
+    }
+});
+
+// INPUT LAYAR SENTUH (MOBILE)
+jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); inputJumpStart(); });
+jumpBtn.addEventListener('mouseup', (e) => { e.preventDefault(); inputJumpEnd(); });
+jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); inputJumpStart(); }, {passive: false});
+jumpBtn.addEventListener('touchend', (e) => { e.preventDefault(); inputJumpEnd(); }, {passive: false});
+
+document.getElementById('leftBtn').addEventListener('mousedown', (e) => { e.preventDefault(); isLeftPressed = true; });
+document.getElementById('leftBtn').addEventListener('mouseup', (e) => { e.preventDefault(); isLeftPressed = false; });
+document.getElementById('leftBtn').addEventListener('touchstart', (e) => { e.preventDefault(); isLeftPressed = true; }, {passive: false});
+document.getElementById('leftBtn').addEventListener('touchend', (e) => { e.preventDefault(); isLeftPressed = false; }, {passive: false});
+
+document.getElementById('rightBtn').addEventListener('mousedown', (e) => { e.preventDefault(); isRightPressed = true; });
+document.getElementById('rightBtn').addEventListener('mouseup', (e) => { e.preventDefault(); isRightPressed = false; });
+document.getElementById('rightBtn').addEventListener('touchstart', (e) => { e.preventDefault(); isRightPressed = true; }, {passive: false});
+document.getElementById('rightBtn').addEventListener('touchend', (e) => { e.preventDefault(); isRightPressed = false; }, {passive: false});
+
+window.addEventListener('mouseup', () => { isJumpingPressed = false; isLeftPressed = false; isRightPressed = false; });
+window.addEventListener('touchend', () => { isJumpingPressed = false; isLeftPressed = false; isRightPressed = false; });
+
+function initPlatformControls() {
+    const gamepadArea = document.getElementById('gamepadArea');
+    if (isMobileDevice()) {
+        gamepadArea.style.display = 'flex';
+        if (controlMode === 'manual') {
+            document.getElementById('movementUi').style.display = 'flex';
+            jumpBtn.style.width = "50%";
+        } else {
+            document.getElementById('movementUi').style.display = 'none';
+            jumpBtn.style.width = "95%";
+        }
+    } else {
+        gamepadArea.style.display = 'none';
+    }
+}
+// =============================================================================
+
+// --- LOGIKA EDITOR LEVEL ---
+const tools = ['toolCube', 'toolSpike', 'toolStairs', 'toolPortalCube', 'toolPortalShip', 'toolFinish', 'toolEraser'];
+tools.forEach(t => {
+    document.getElementById(t).addEventListener('click', () => {
+        tools.forEach(tl => document.getElementById(tl).classList.remove('active-tool'));
+        document.getElementById(t).classList.add('active-tool');
+        selectedTool = t.replace('tool', '').toLowerCase();
+    });
+});
+
+document.getElementById('rotateSettingBtn').addEventListener('click', () => {
+    currentRotationDegree = (currentRotationDegree + 90) % 360;
+    document.getElementById('rotateSettingBtn').innerText = `🔄 ROTASI: ${currentRotationDegree}°`;
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+    activeObstacles = []; resetGame();
+});
+
+canvas.addEventListener('click', (e) => {
+    if (mode !== 'edit') return;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+    const worldX = clickX / cameraZoom + cameraX;
+    const worldY = clickY / cameraZoom + cameraY;
+
+    const gridX = Math.floor(worldX / GRID_SIZE) * GRID_SIZE + GRID_SIZE / 2;
+    const gridY = Math.floor(worldY / GRID_SIZE) * GRID_SIZE;
+
+    if (selectedTool === 'eraser') {
+        activeObstacles = activeObstacles.filter(obs => {
+            let d = Math.hypot(obs.x - gridX, (obs.type==='spike'?obs.y-GRID_SIZE/2:obs.y) - (gridY+GRID_SIZE/2));
+            return d > 25;
+        });
+    } else {
+        let newElement;
+        if (selectedTool === 'spike') {
+            newElement = {type: 'spike', x: gridX, y: GROUND_Y, angle: currentRotationDegree};
+        } else if (selectedTool === 'cube') {
+            newElement = {type: 'cube', x: gridX, y: gridY, w: GRID_SIZE, h: GRID_SIZE};
+        } else if (selectedTool === 'stairs') {
+            newElement = {type: 'stairs', x: gridX, y: gridY, w: GRID_SIZE, h: GRID_SIZE, angle: currentRotationDegree};
+        } else if (selectedTool === 'portalcube') {
+            newElement = {type: 'portal_cube', x: gridX, y: gridY - 40, w: 40, h: 80};
+        } else if (selectedTool === 'portalship') {
+            newElement = {type: 'portal_ship', x: gridX, y: gridY - 40, w: 40, h: 80};
+        } else if (selectedTool === 'finish') {
+            newElement = {type: 'finish', x: gridX, y: GROUND_Y};
+        }
+        if (newElement) activeObstacles.push(newElement);
+    }
+});
+
+// Jalankan program utama
+player.reset();
+initPlatformControls();
+window.focus();
+loop();
+</script>
+</body>
+</html>
