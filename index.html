@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <title>Geometry Dash Fix</title>
     <style>
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        canvas { border: 2px solid #fff; background: #111; max-width: 100%; max-height: 100%; }
+        body { margin: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        canvas { border: 2px solid #fff; background: #000; }
     </style>
 </head>
 <body>
@@ -13,63 +14,60 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-let player = { x: 100, y: 300, vy: 0, w: 30, h: 30, onGround: true };
+let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube' }; // mode: 'cube' atau 'ship'
 let obstacles = [{ x: 500, y: 320, w: 30, h: 30 }];
-let gameSpeed = 5;
 let gravity = 0.8;
 
-function jump() {
-    // Versi paksa: jika di tanah, langsung kasih kecepatan ke atas
-    if (player.onGround) {
-        player.vy = -15;
-        player.onGround = false;
+// Pemicu Input
+function triggerAction(isDown) {
+    if (player.mode === 'cube') {
+        if (isDown && player.y >= 300) { // Hanya lompat jika di tanah
+            player.vy = -15;
+        }
+    } else {
+        // Mode Ship: terbang jika ditekan
+        player.vy = isDown ? -8 : 8;
     }
 }
 
 function update() {
-    // Gerakan maju
-    player.x += gameSpeed;
-    
-    // Gravitasi
+    player.x += 5; // Maju otomatis
     player.vy += gravity;
     player.y += player.vy;
 
-    // Cek lantai
-    if (player.y >= 320) {
-        player.y = 320;
+    // Batas tanah (Cube mode)
+    if (player.mode === 'cube' && player.y >= 300) {
+        player.y = 300;
         player.vy = 0;
-        player.onGround = true;
     }
+    // Batas layar (Ship mode)
+    if (player.y > 370) player.y = 370;
+    if (player.y < 0) player.y = 0;
 
-    // Cek tabrakan simpel
-    obstacles.forEach(o => {
-        if (player.x < o.x + o.w && player.x + player.w > o.x &&
-            player.y < o.y + o.h && player.y + player.h > o.y) {
-            alert("Kena! Restart...");
-            player.x = 100;
-        }
-    });
-
-    // Geser obstacle
-    obstacles.forEach(o => o.x -= gameSpeed);
-    if (obstacles[0].x < -50) obstacles[0].x = 800;
+    // Deteksi Portal (Ganti mode)
+    if (player.x > 700 && player.x < 750) player.mode = 'ship';
 }
 
 function render() {
     ctx.clearRect(0, 0, 800, 400);
-    ctx.fillStyle = '#0f0';
-    ctx.fillRect(player.x, player.y, player.w, player.h);
+    // Gambar Player
+    ctx.fillStyle = player.mode === 'cube' ? '#0f0' : '#00f';
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+    // Gambar Obstacle
     ctx.fillStyle = '#f00';
     obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
-    requestAnimationFrame(() => { update(); render(); });
+    
+    update();
+    requestAnimationFrame(render);
 }
 
-// INPUT SUPER AGRESIF
-// PC: Semua tombol keyboard
-window.addEventListener('keydown', jump);
-// HP & PC: Semua jenis klik/sentuhan
-window.addEventListener('mousedown', jump);
-window.addEventListener('touchstart', jump);
+// Event Listener Agresif
+window.addEventListener('keydown', () => triggerAction(true));
+window.addEventListener('keyup', () => triggerAction(false));
+window.addEventListener('mousedown', () => triggerAction(true));
+window.addEventListener('mouseup', () => triggerAction(false));
+window.addEventListener('touchstart', (e) => { e.preventDefault(); triggerAction(true); });
+window.addEventListener('touchend', () => triggerAction(false));
 
 render();
 </script>
