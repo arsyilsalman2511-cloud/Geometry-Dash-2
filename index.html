@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Geometry Dash Fix</title>
+    <title>Geometry Dash Fixed Camera</title>
     <style>
         body { margin: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         canvas { border: 2px solid #fff; background: #000; }
@@ -14,60 +14,60 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube' }; // mode: 'cube' atau 'ship'
-let obstacles = [{ x: 500, y: 320, w: 30, h: 30 }];
+let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube' };
+let obstacles = [{ x: 500, y: 320, w: 30, h: 30 }, { x: 900, y: 320, w: 30, h: 30 }];
+let cameraX = 0; // Posisi kamera
 let gravity = 0.8;
 
-// Pemicu Input
 function triggerAction(isDown) {
     if (player.mode === 'cube') {
-        if (isDown && player.y >= 300) { // Hanya lompat jika di tanah
-            player.vy = -15;
-        }
+        if (isDown && player.y >= 300) player.vy = -15;
     } else {
-        // Mode Ship: terbang jika ditekan
         player.vy = isDown ? -8 : 8;
     }
 }
 
 function update() {
-    player.x += 5; // Maju otomatis
+    player.x += 5; // Kecepatan gerak
     player.vy += gravity;
     player.y += player.vy;
 
-    // Batas tanah (Cube mode)
+    // Kamera mengunci player: Kamera selalu di posisi player.x dikurangi offset agar player di 1/4 layar
+    cameraX = player.x - 150; 
+
     if (player.mode === 'cube' && player.y >= 300) {
         player.y = 300;
         player.vy = 0;
     }
-    // Batas layar (Ship mode)
-    if (player.y > 370) player.y = 370;
-    if (player.y < 0) player.y = 0;
-
-    // Deteksi Portal (Ganti mode)
+    
+    // Portal switch mode
     if (player.x > 700 && player.x < 750) player.mode = 'ship';
 }
 
 function render() {
     ctx.clearRect(0, 0, 800, 400);
+    
+    ctx.save();
+    // Geser seluruh dunia berdasarkan posisi kamera
+    ctx.translate(-cameraX, 0);
+
     // Gambar Player
     ctx.fillStyle = player.mode === 'cube' ? '#0f0' : '#00f';
     ctx.fillRect(player.x, player.y, player.size, player.size);
-    // Gambar Obstacle
+    
+    // Gambar Obstacles
     ctx.fillStyle = '#f00';
     obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+    
+    ctx.restore();
     
     update();
     requestAnimationFrame(render);
 }
 
-// Event Listener Agresif
 window.addEventListener('keydown', () => triggerAction(true));
-window.addEventListener('keyup', () => triggerAction(false));
 window.addEventListener('mousedown', () => triggerAction(true));
-window.addEventListener('mouseup', () => triggerAction(false));
 window.addEventListener('touchstart', (e) => { e.preventDefault(); triggerAction(true); });
-window.addEventListener('touchend', () => triggerAction(false));
 
 render();
 </script>
