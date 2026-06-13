@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Perfect Fix</title>
+    <title>Geometry Dash - Ultimate Input Fix</title>
     <style>
         body {
             margin: 0;
@@ -174,7 +174,7 @@
 <body>
 
 <div id="gameContainer">
-    <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Tips PC: Klik area game terlebih dahulu agar tombol keyboard aktif!</div>
+    <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Kontrol: Tekan SPASI, PANAH ATAS, atau KLIK DI MANA SAJA untuk lompat!</div>
     <canvas id="gameCanvas" width="800" height="400"></canvas>
 
     <div class="ui-panel">
@@ -263,7 +263,6 @@ let isRightPressed = false;
 
 let isGameOver = false;
 let isGameWon = false; 
-let gameStarted = false; // Status penahan agar game tidak otomatis jalan sebelum di-klik
 
 const player = {
     x: 120, 
@@ -285,17 +284,18 @@ const player = {
     }
 };
 
+// Map Dibuat Lebih Panjang di Awal agar Karakter Tidak Langsung Menabrak Saat Spawn
 const levels = [
     [
-        {type: 'spike', x: 440, y: GROUND_Y, angle: 0},
-        {type: 'portal_ship', x: 560, y: 220, w: 40, h: 80}, 
-        {type: 'cube', x: 760, y: 160, w: 40, h: 40},
-        {type: 'portal_cube', x: 920, y: 220, w: 40, h: 80}, 
-        {type: 'finish', x: 1300, y: GROUND_Y}
+        {type: 'spike', x: 600, y: GROUND_Y, angle: 0},
+        {type: 'portal_ship', x: 800, y: 220, w: 40, h: 80}, 
+        {type: 'cube', x: 1050, y: 160, w: 40, h: 40},
+        {type: 'portal_cube', x: 1250, y: 220, w: 40, h: 80}, 
+        {type: 'finish', x: 1700, y: GROUND_Y}
     ],
     [
-        {type: 'stairs', x: 400, y: GROUND_Y - 40, w: 40, h: 40, angle: 0},
-        {type: 'finish', x: 1100, y: GROUND_Y}
+        {type: 'stairs', x: 500, y: GROUND_Y - 40, w: 40, h: 40, angle: 0},
+        {type: 'finish', x: 1200, y: GROUND_Y}
     ]
 ];
 
@@ -459,15 +459,6 @@ function updateCameraUI() {
 
 function update() {
     if (mode === 'play' && !isGameOver && !isGameWon) {
-        
-        // PENGAMAN: Jika game belum dimulai oleh player, kunci pergerakan di zona aman
-        if (!gameStarted) {
-            player.y = GROUND_Y - player.size;
-            player.vy = 0;
-            player.isGrounded = true;
-            return;
-        }
-
         let isMoving = false;
 
         if (controlMode === 'only_jump') {
@@ -600,33 +591,24 @@ function render() {
     drawPlayer();
     ctx.restore(); 
 
-    // Overlay visual jika game siap dimainkan (Tap to Start)
-    if (mode === 'play' && !gameStarted && !isGameOver && !isGameWon) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#00ffff"; ctx.font = "bold 22px Arial"; ctx.textAlign = "center";
-        ctx.fillText("GEOMETRY DASH - READY", canvas.width / 2, canvas.height / 2 - 20);
-        ctx.fillStyle = "#ffffff"; ctx.font = "14px Arial";
-        ctx.fillText("Tekan SPASI atau KLIK DI SINI untuk Mulai Main!", canvas.width / 2, canvas.height / 2 + 15);
-    }
-
     if (isGameOver) {
-        ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#ff3333"; ctx.font = "bold 35px Arial"; ctx.textAlign = "center";
         ctx.fillText("CRASHED!", canvas.width / 2, canvas.height / 2);
         ctx.fillStyle = "#ffffff"; ctx.font = "16px Arial";
-        ctx.fillText("Tekan SPASI / KLIK untuk Main Lagi", canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText("Tekan tombol apa saja / Klik layar untuk restart", canvas.width / 2, canvas.height / 2 + 40);
     }
     if (isGameWon) {
-        ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#ffff00"; ctx.font = "bold 35px Arial"; ctx.textAlign = "center";
         ctx.fillText("LEVEL PASSED!", canvas.width / 2, canvas.height / 2);
         ctx.fillStyle = "#ffffff"; ctx.font = "16px Arial";
-        ctx.fillText("Tekan SPASI / KLIK untuk Main Lagi", canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText("Tekan tombol apa saja / Klik layar untuk main lagi", canvas.width / 2, canvas.height / 2 + 40);
     }
 }
 
 function resetGame() {
-    isGameOver = false; isGameWon = false; gameStarted = false; cameraX = 0; cameraY = 0;
+    isGameOver = false; isGameWon = false; cameraX = 0; cameraY = 0;
     player.reset();
 }
 
@@ -693,21 +675,16 @@ levelBtn.addEventListener('click', () => {
     resetGame();
 });
 
-// ==================== SYSTEM INPUT ANTI GAGAL (PC & MOBILE) ====================
+// ==================== SYSTEM INPUT AGRESIF (ANTI-GAGAL GLOBAL) ====================
 
 function isMobileDevice() {
-    const matchUA = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    return matchUA && hasTouch;
+    return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0);
 }
 
 function inputJumpStart() { 
     if (isGameOver || isGameWon) {
         resetGame(); 
     } else {
-        if (!gameStarted && mode === 'play') {
-            gameStarted = true; // Jalankan gerakan map saat player pertama kali melompat/klik
-        }
         isJumpingPressed = true; 
     }
 }
@@ -715,73 +692,51 @@ function inputJumpEnd() {
     isJumpingPressed = false; 
 }
 
-// Deteksi input gabungan (Nama Tombol Teks + Sistem Angka ASCII Jadul Browser)
-// GANTI BLOK KEYDOWN LAMA DENGAN INI UNTUK MEMAKSA INPUT MASUK:
+// 1. KEYBOARD DETECTOR: Agresif membaca kombinasi String Key dan ASCII Code jadul
 window.addEventListener('keydown', function(e) {
-    // Cetak ke konsol browser untuk memastikan tombolmu terbaca
-    console.log("Tombol ditekan: ", e.key); 
-    
-    // Matikan fungsi bawaan browser (seperti scrolling)
-    e.preventDefault(); 
+    const k = e.key || '';
+    const code = e.keyCode || e.which || 0;
 
-    if (isGameOver || isGameWon) {
-        resetGame();
-        return;
+    // Deteksi tombol lompat universal (Spasi, Panah Atas, W)
+    if (k === ' ' || code === 32 || k === 'ArrowUp' || code === 38 || k === 'w' || k === 'W') {
+        e.preventDefault();
+        inputJumpStart();
     }
-
-    // PAKSA: Tombol apa pun yang ditekan (Spasi, Panah, W, dll) akan memicu lompatan
-    inputJumpStart();
-    
-    // Logika manual (jika kontrol diubah ke manual)
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isLeftPressed = true;
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isRightPressed = true;
+    // Deteksi navigasi manual kiri/kanan
+    if (k === 'ArrowLeft' || code === 37 || k === 'a' || k === 'A') isLeftPressed = true;
+    if (k === 'ArrowRight' || code === 39 || k === 'd' || k === 'D') isRightPressed = true;
 }, { passive: false });
 
 window.addEventListener('keyup', function(e) {
-    const key = e.key || '';
+    const k = e.key || '';
     const code = e.keyCode || e.which || 0;
 
-    if (key === ' ' || code === 32 || key === 'ArrowUp' || code === 38 || key === 'w' || key === 'W') {
-        inputJumpEnd();
-    }
-    if (key === 'ArrowLeft' || code === 37 || key === 'a' || key === 'A') {
-        isLeftPressed = false;
-    }
-    if (key === 'ArrowRight' || code === 39 || key === 'd' || key === 'D') {
-        isRightPressed = false;
-    }
+    if (k === ' ' || code === 32 || k === 'ArrowUp' || code === 38 || k === 'w' || k === 'W') inputJumpEnd();
+    if (k === 'ArrowLeft' || code === 37 || k === 'a' || k === 'A') isLeftPressed = false;
+    if (k === 'ArrowRight' || code === 39 || k === 'd' || k === 'D') isRightPressed = false;
 });
 
-// Deteksi klik mouse pada canvas untuk melompat
-canvas.addEventListener('mousedown', function(e) {
+// 2. GLOBAL MOUSE CLICK: Jika keyboard diblokir, klik di BAGIAN MANA PUN pada layar web akan memaksa karakter melompat
+window.addEventListener('mousedown', function(e) {
+    // Abaikan klik jika yang di-klik adalah tombol menu UI
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+    
     if (mode === 'play') {
         inputJumpStart();
     }
 });
-canvas.addEventListener('mouseup', function() {
-    if (mode === 'play') {
-        inputJumpEnd();
-    }
+window.addEventListener('mouseup', function() {
+    if (mode === 'play') inputJumpEnd();
 });
 
-// INPUT LAYAR SENTUH (MOBILE)
-jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); inputJumpStart(); });
-jumpBtn.addEventListener('mouseup', (e) => { e.preventDefault(); inputJumpEnd(); });
+// 3. MOBILE TOUCH: Respon instan untuk perangkat layar sentuh
 jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); inputJumpStart(); }, {passive: false});
 jumpBtn.addEventListener('touchend', (e) => { e.preventDefault(); inputJumpEnd(); }, {passive: false});
 
-document.getElementById('leftBtn').addEventListener('mousedown', (e) => { e.preventDefault(); isLeftPressed = true; });
-document.getElementById('leftBtn').addEventListener('mouseup', (e) => { e.preventDefault(); isLeftPressed = false; });
 document.getElementById('leftBtn').addEventListener('touchstart', (e) => { e.preventDefault(); isLeftPressed = true; }, {passive: false});
 document.getElementById('leftBtn').addEventListener('touchend', (e) => { e.preventDefault(); isLeftPressed = false; }, {passive: false});
-
-document.getElementById('rightBtn').addEventListener('mousedown', (e) => { e.preventDefault(); isRightPressed = true; });
-document.getElementById('rightBtn').addEventListener('mouseup', (e) => { e.preventDefault(); isRightPressed = false; });
 document.getElementById('rightBtn').addEventListener('touchstart', (e) => { e.preventDefault(); isRightPressed = true; }, {passive: false});
 document.getElementById('rightBtn').addEventListener('touchend', (e) => { e.preventDefault(); isRightPressed = false; }, {passive: false});
-
-window.addEventListener('mouseup', () => { isJumpingPressed = false; isLeftPressed = false; isRightPressed = false; });
-window.addEventListener('touchend', () => { isJumpingPressed = false; isLeftPressed = false; isRightPressed = false; });
 
 function initPlatformControls() {
     const gamepadArea = document.getElementById('gamepadArea');
