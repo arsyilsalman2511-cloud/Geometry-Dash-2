@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Extended Editor</title>
+    <title>Geometry Dash - Full Editor</title>
     <style>
-        body { margin: 0; background: #0a0a12; color: white; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
-        canvas { border: 2px solid #555; background: #000; cursor: crosshair; margin-top: 10px; width: 800px; height: 400px; }
-        .ui { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-        button { padding: 8px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; background: #333; color: white; }
-        button.active { background: #00ff66; color: #000; }
+        body { margin: 0; background: #0a0a12; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        canvas { border: 2px solid #555; background: #000; cursor: crosshair; margin-top: 10px; }
+        .ui { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; justify-content: center; max-width: 900px; }
+        button { padding: 8px 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; background: #333; color: white; }
+        button.active { background: #ffaa00; color: #000; }
     </style>
 </head>
 <body>
@@ -17,11 +17,15 @@
 <canvas id="game" width="800" height="400"></canvas>
 
 <div class="ui">
-    <button onclick="mode='play'">Mode: Main</button>
-    <button onclick="mode='edit'">Mode: Editor</button>
-    <button id="btnSpike" class="active" onclick="setTool('spike')">Tool: Duri</button>
-    <button id="btnBlock" onclick="setTool('block')">Tool: Block</button>
-    <button onclick="activeObstacles = []">Reset Level</button>
+    <button onclick="mode='play'">PLAY</button>
+    <button onclick="mode='edit'">EDIT</button>
+    <button id="btn-spike" class="active" onclick="setTool('spike')">Duri</button>
+    <button id="btn-block" onclick="setTool('block')">Balok</button>
+    <button id="btn-stairs" onclick="setTool('stairs')">Tangga</button>
+    <button id="btn-pCube" onclick="setTool('pCube')">P.Cube</button>
+    <button id="btn-pShip" onclick="setTool('pShip')">P.Ship</button>
+    <button id="btn-finish" onclick="setTool('finish')">Finish</button>
+    <button onclick="activeObstacles = []">Clear</button>
 </div>
 
 <script>
@@ -31,45 +35,32 @@ const ctx = canvas.getContext('2d');
 let mode = 'play';
 let currentTool = 'spike';
 let cameraX = 0;
-let gravity = 0.8;
 let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube', onGround: true };
-let activeObstacles = [{ type: 'spike', x: 500, y: 320 }, { type: 'block', x: 700, y: 250 }];
+let activeObstacles = [];
 
 function setTool(tool) {
     currentTool = tool;
-    document.getElementById('btnSpike').className = (tool === 'spike' ? 'active' : '');
-    document.getElementById('btnBlock').className = (tool === 'block' ? 'active' : '');
-}
-
-function jump() {
-    if (player.mode === 'cube' && player.onGround) {
-        player.vy = -14;
-        player.onGround = false;
-    }
+    document.querySelectorAll('.ui button').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-'+tool)?.classList.add('active');
 }
 
 function update() {
     if (mode === 'play') {
         player.x += 5;
-        
-        // Fisika Cube
-        player.vy += gravity;
+        player.vy += (player.mode === 'cube' ? 0.8 : 0.3);
         player.y += player.vy;
-        
-        // Deteksi Lantai Dasar
-        if (player.y >= 300) {
-            player.y = 300;
-            player.vy = 0;
-            player.onGround = true;
-        }
 
-        // Deteksi Tabrakan Sederhana
+        // Collision Logic
         activeObstacles.forEach(o => {
             if (player.x < o.x + 30 && player.x + 30 > o.x && player.y < o.y + 30 && player.y + 30 > o.y) {
-                if(o.type === 'spike') player.x = 100; // Reset jika kena duri
+                if (o.type === 'spike') player.x = 100; // Crash
+                if (o.type === 'pCube') player.mode = 'cube';
+                if (o.type === 'pShip') player.mode = 'ship';
+                if (o.type === 'finish') alert("Level Selesai!");
             }
         });
 
+        if (player.mode === 'cube' && player.y >= 300) { player.y = 300; player.vy = 0; player.onGround = true; }
         cameraX = player.x - 150;
     }
 }
@@ -79,13 +70,16 @@ function render() {
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // Gambar Player
     ctx.fillStyle = '#0f0';
     ctx.fillRect(player.x, player.y, player.size, player.size);
     
-    // Gambar Benda
     activeObstacles.forEach(o => {
-        ctx.fillStyle = (o.type === 'spike') ? '#f00' : '#00ffff';
+        if (o.type === 'spike') ctx.fillStyle = '#f00';
+        else if (o.type === 'block') ctx.fillStyle = '#0ff';
+        else if (o.type === 'stairs') ctx.fillStyle = '#f0f';
+        else if (o.type === 'pCube') ctx.fillStyle = '#0f0';
+        else if (o.type === 'pShip') ctx.fillStyle = '#00f';
+        else if (o.type === 'finish') ctx.fillStyle = '#ff0';
         ctx.fillRect(o.x, o.y, 30, 30);
     });
 
@@ -94,21 +88,16 @@ function render() {
     requestAnimationFrame(render);
 }
 
-// Editor Klik
 canvas.addEventListener('mousedown', (e) => {
     if (mode === 'edit') {
         const rect = canvas.getBoundingClientRect();
         const worldX = (e.clientX - rect.left) + cameraX;
-        // Membulatkan posisi ke grid 30px agar rapi
-        const gridX = Math.floor(worldX / 30) * 30;
-        const gridY = Math.floor((e.clientY - rect.top) / 30) * 30;
-        activeObstacles.push({ type: currentTool, x: gridX, y: gridY });
+        activeObstacles.push({ type: currentTool, x: Math.floor(worldX/30)*30, y: 270 });
     } else {
-        jump();
+        if (player.mode === 'cube' && player.onGround) { player.vy = -14; player.onGround = false; }
+        else if (player.mode === 'ship') player.vy = -6;
     }
 });
-
-window.addEventListener('keydown', (e) => { if(e.code === 'Space') jump(); });
 
 render();
 </script>
