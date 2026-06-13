@@ -2,18 +2,18 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Geometry Dash Custom Shapes</title>
+    <title>Geometry Dash Final</title>
     <style>
-        body { margin: 0; background: #0a0a12; color: white; display: flex; flex-direction: column; align-items: center; }
+        body { margin: 0; background: #0a0a12; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
         canvas { border: 2px solid #555; background: #000; cursor: crosshair; margin-top: 10px; }
         .ui { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-        button { padding: 10px 15px; cursor: pointer; border-radius: 6px; font-weight: bold; border: none; }
+        button { padding: 10px 15px; cursor: pointer; border-radius: 6px; font-weight: bold; border: none; color: white; transition: 0.2s; }
         #btn-spike { background: #ff4444; }
-        #btn-block { background: #00ffff; }
+        #btn-block { background: #00ffff; color: #000; }
         #btn-stairs { background: #ff00ff; }
-        #btn-pCube { background: #00ff66; }
+        #btn-pCube { background: #00ff66; color: #000; }
         #btn-pShip { background: #bd00ff; }
-        #btn-finish { background: #ffcc00; }
+        #btn-finish { background: #ffcc00; color: #000; }
         button.active { outline: 3px solid white; transform: scale(1.1); }
     </style>
 </head>
@@ -32,50 +32,81 @@
 </div>
 
 <script>
-// ... (Bagian logika update tetap sama) ...
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-function drawPlayer(x, y, mode) {
-    ctx.fillStyle = (mode === 'cube') ? '#0f0' : '#00f';
-    if (mode === 'cube') {
-        ctx.fillRect(x, y, 30, 30);
+let mode = 'play';
+let currentTool = 'spike';
+let cameraX = 0;
+let player = { x: 100, y: 300, vy: 0, size: 30, mode: 'cube', onGround: true };
+let activeObstacles = [];
+
+function setTool(tool) {
+    currentTool = tool;
+    document.querySelectorAll('.ui button').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-' + tool).classList.add('active');
+}
+
+function update() {
+    if (mode === 'play') {
+        player.x += 5;
+        player.vy += (player.mode === 'cube' ? 0.8 : 0.3);
+        player.y += player.vy;
+
+        activeObstacles.forEach(o => {
+            if (player.x < o.x + 30 && player.x + 30 > o.x && player.y < o.y + 30 && player.y + 30 > o.y) {
+                if (o.type === 'spike') player.x = 100;
+                else if (o.type === 'pCube') player.mode = 'cube';
+                else if (o.type === 'pShip') player.mode = 'ship';
+            }
+        });
+
+        if (player.mode === 'cube' && player.y >= 300) { player.y = 300; player.vy = 0; player.onGround = true; }
+        if (player.mode === 'ship') { if(player.y > 370) player.y = 370; if(player.y < 0) player.y = 0; }
+        
+        cameraX = player.x - 150;
+    }
+}
+
+function render() {
+    ctx.clearRect(0, 0, 800, 400);
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+
+    // Gambar Player
+    ctx.fillStyle = (player.mode === 'cube') ? '#0f0' : '#00f';
+    if (player.mode === 'cube') ctx.fillRect(player.x, player.y, 30, 30);
+    else {
+        ctx.beginPath();
+        ctx.moveTo(player.x + 30, player.y + 15); ctx.lineTo(player.x, player.y); ctx.lineTo(player.x, player.y + 30);
+        ctx.fill();
+    }
+    
+    // Gambar Objek
+    activeObstacles.forEach(o => {
+        ctx.fillStyle = (o.type === 'spike' ? '#ff4444' : o.type === 'block' ? '#00ffff' : o.type === 'stairs' ? '#ff00ff' : o.type === 'pCube' ? '#00ff66' : o.type === 'pShip' ? '#bd00ff' : '#ffcc00');
+        if (o.type === 'spike') { ctx.beginPath(); ctx.moveTo(o.x+15, o.y); ctx.lineTo(o.x, o.y+30); ctx.lineTo(o.x+30, o.y+30); ctx.fill(); }
+        else if (o.type === 'block' || o.type === 'stairs') ctx.fillRect(o.x, o.y, 30, 30);
+        else if (o.type === 'pCube' || o.type === 'pShip') { ctx.beginPath(); ctx.ellipse(o.x+15, o.y+15, 10, 20, 0, 0, Math.PI*2); ctx.fill(); }
+        else if (o.type === 'finish') { ctx.fillRect(o.x+12, o.y, 6, 30); ctx.beginPath(); ctx.moveTo(o.x+18, o.y); ctx.lineTo(o.x+30, o.y+10); ctx.lineTo(o.x+18, o.y+20); ctx.fill(); }
+    });
+
+    ctx.restore();
+    update();
+    requestAnimationFrame(render);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    if (mode === 'edit') {
+        const rect = canvas.getBoundingClientRect();
+        activeObstacles.push({ type: currentTool, x: Math.floor(((e.clientX - rect.left) + cameraX)/30)*30, y: 270 });
     } else {
-        // Ship: Segitiga miring 90 derajat ke depan
-        ctx.beginPath();
-        ctx.moveTo(x + 30, y + 15); // Ujung depan
-        ctx.lineTo(x, y);           // Atas
-        ctx.lineTo(x, y + 30);      // Bawah
-        ctx.fill();
+        if (player.mode === 'cube' && player.onGround) { player.vy = -14; player.onGround = false; }
+        else if (player.mode === 'ship') player.vy = -6;
     }
-}
+});
 
-function drawObject(o) {
-    ctx.fillStyle = (o.type === 'spike') ? '#ff4444' : 
-                    (o.type === 'block') ? '#00ffff' : 
-                    (o.type === 'stairs') ? '#ff00ff' : 
-                    (o.type === 'pCube') ? '#00ff66' : 
-                    (o.type === 'pShip') ? '#bd00ff' : '#ffcc00';
-
-    if (o.type === 'spike') {
-        ctx.beginPath();
-        ctx.moveTo(o.x + 15, o.y); ctx.lineTo(o.x, o.y + 30); ctx.lineTo(o.x + 30, o.y + 30);
-        ctx.fill();
-    } else if (o.type === 'block' || o.type === 'stairs') {
-        ctx.fillRect(o.x, o.y, 30, 30);
-    } else if (o.type === 'pCube' || o.type === 'pShip') {
-        // Portal: Oval
-        ctx.beginPath();
-        ctx.ellipse(o.x + 15, o.y + 15, 10, 20, 0, 0, Math.PI * 2);
-        ctx.fill();
-    } else if (o.type === 'finish') {
-        // Bendera
-        ctx.fillRect(o.x + 12, o.y, 6, 30); // Tiang
-        ctx.beginPath();
-        ctx.moveTo(o.x + 18, o.y); ctx.lineTo(o.x + 30, o.y + 10); ctx.lineTo(o.x + 18, o.y + 20);
-        ctx.fill();
-    }
-}
-
-// Panggil drawPlayer dan drawObject di dalam render()
+render();
 </script>
 </body>
 </html>
